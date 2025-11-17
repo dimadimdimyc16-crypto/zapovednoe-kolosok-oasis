@@ -13,6 +13,7 @@ import Documents from "./pages/Documents";
 import News from "./pages/News";
 import Contacts from "./pages/Contacts";
 import Auth from "./pages/Auth";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,8 @@ const App = () => (
           <Route path="/zapovednoe/documents" element={<Documents settlement="zapovednoe" />} />
           <Route path="/zapovednoe/news" element={<News settlement="zapovednoe" />} />
           <Route path="/zapovednoe/contacts" element={<Contacts settlement="zapovednoe" />} />
+          <Route path="/zapovednoe/auth" element={<Auth settlement="zapovednoe" />} />
+          <Route path="/zapovednoe/admin" element={<Admin settlement="zapovednoe" />} />
           
           {/* Маршруты для Колосок */}
           <Route path="/kolosok" element={<Kolosok />} />
@@ -46,9 +49,8 @@ const App = () => (
           <Route path="/kolosok/documents" element={<Documents settlement="kolosok" />} />
           <Route path="/kolosok/news" element={<News settlement="kolosok" />} />
           <Route path="/kolosok/contacts" element={<Contacts settlement="kolosok" />} />
-          
-          {/* Аутентификация */}
-          <Route path="/auth" element={<Auth />} />
+          <Route path="/kolosok/auth" element={<Auth settlement="kolosok" />} />
+          <Route path="/kolosok/admin" element={<Admin settlement="kolosok" />} />
           
           {/* 404 */}
           <Route path="*" element={<NotFound />} />
