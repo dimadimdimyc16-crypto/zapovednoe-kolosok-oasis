@@ -4,16 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Ruler, Tag, Phone, Filter, SlidersHorizontal } from "lucide-react";
+import { MapPin, Ruler, Tag, Phone, Filter, SlidersHorizontal, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface PlotsProps {
   settlement: "zapovednoe" | "kolosok";
 }
 
 const Plots = ({ settlement }: PlotsProps) => {
+  const navigate = useNavigate();
   const [areaFilter, setAreaFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string | "all">("all");
   const [maxPrice, setMaxPrice] = useState<string>("");
@@ -144,7 +146,11 @@ const Plots = ({ settlement }: PlotsProps) => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {plots.map((plot) => (
-              <Card key={plot.id} className="overflow-hidden hover:shadow-elegant transition-smooth hover-scale group">
+              <Card 
+                key={plot.id} 
+                className="overflow-hidden hover:shadow-elegant transition-smooth hover-scale group cursor-pointer"
+                onClick={() => navigate(`/${settlement}/plots/${plot.id}`)}
+              >
                 <div className="relative h-56 overflow-hidden">
                   <img
                     src={(plot.images as any)?.[0] || "https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=800"}
@@ -162,6 +168,11 @@ const Plots = ({ settlement }: PlotsProps) => {
                     <h3 className="text-2xl font-bold text-white drop-shadow-lg">
                       Участок №{plot.plot_number}
                     </h3>
+                  </div>
+                  <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="bg-primary text-primary-foreground rounded-full p-2">
+                      <Eye className="w-4 h-4" />
+                    </div>
                   </div>
                 </div>
                 
@@ -196,14 +207,19 @@ const Plots = ({ settlement }: PlotsProps) => {
                     <Button
                       className="w-full shadow-elegant"
                       size="lg"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (plot.status === "available") {
+                          navigate(`/${settlement}/plots/${plot.id}`);
+                        }
+                      }}
                       disabled={plot.status !== "available"}
-                      asChild={plot.status === "available"}
                     >
                       {plot.status === "available" ? (
-                        <a href="tel:+79000000000" className="flex items-center justify-center gap-2">
-                          <Phone className="w-4 h-4" />
-                          Забронировать
-                        </a>
+                        <>
+                          <Eye className="w-4 h-4 mr-2" />
+                          Подробнее
+                        </>
                       ) : (
                         <span>{statusLabels[plot.status as keyof typeof statusLabels].label}</span>
                       )}
