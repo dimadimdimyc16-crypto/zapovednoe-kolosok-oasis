@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Zapovednoe from "./pages/Zapovednoe";
 import Kolosok from "./pages/Kolosok";
 import Plots from "./pages/Plots";
+import PlotDetail from "./pages/PlotDetail";
 import About from "./pages/About";
 import Infrastructure from "./pages/Infrastructure";
 import Gallery from "./pages/Gallery";
@@ -31,6 +32,7 @@ const App = () => (
           {/* Маршруты для Заповедное */}
           <Route path="/zapovednoe" element={<Zapovednoe />} />
           <Route path="/zapovednoe/plots" element={<Plots settlement="zapovednoe" />} />
+          <Route path="/zapovednoe/plots/:id" element={<PlotDetail settlement="zapovednoe" />} />
           <Route path="/zapovednoe/about" element={<About settlement="zapovednoe" />} />
           <Route path="/zapovednoe/infrastructure" element={<Infrastructure settlement="zapovednoe" />} />
           <Route path="/zapovednoe/gallery" element={<Gallery settlement="zapovednoe" />} />
@@ -43,6 +45,7 @@ const App = () => (
           {/* Маршруты для Колосок */}
           <Route path="/kolosok" element={<Kolosok />} />
           <Route path="/kolosok/plots" element={<Plots settlement="kolosok" />} />
+          <Route path="/kolosok/plots/:id" element={<PlotDetail settlement="kolosok" />} />
           <Route path="/kolosok/about" element={<About settlement="kolosok" />} />
           <Route path="/kolosok/infrastructure" element={<Infrastructure settlement="kolosok" />} />
           <Route path="/kolosok/gallery" element={<Gallery settlement="kolosok" />} />
