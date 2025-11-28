@@ -33,7 +33,7 @@ All colors MUST be HSL.
     --muted-foreground: 30 10% 45%;
 
     /* Золотые акценты */
-    --accent: 40 85% 60%;
+    --accent: 40 85% 55%;
     --accent-foreground: 30 25% 15%;
 
     --destructive: 0 70% 50%;
@@ -49,11 +49,13 @@ All colors MUST be HSL.
     --gradient-hero: linear-gradient(135deg, hsl(142 45% 35% / 0.95), hsl(142 50% 25% / 0.98));
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(35 20% 98%));
     --gradient-overlay: linear-gradient(180deg, transparent, hsl(30 15% 15% / 0.7));
+    --gradient-primary: linear-gradient(135deg, hsl(142 45% 35%), hsl(142 50% 45%));
 
     /* Тени */
     --shadow-soft: 0 2px 20px hsl(30 15% 15% / 0.08);
     --shadow-medium: 0 8px 30px hsl(30 15% 15% / 0.12);
     --shadow-strong: 0 20px 60px hsl(30 15% 15% / 0.18);
+    --shadow-elegant: 0 10px 40px hsl(142 45% 35% / 0.15);
     
     /* Анимации */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -102,4 +104,88 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  /* Custom gradient text */
+  .bg-gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-light)));
+  }
+  
+  /* Transitions */
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+  
+  .transition-bounce {
+    transition: var(--transition-bounce);
+  }
+  
+  /* Shadows */
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  
+  .shadow-medium {
+    box-shadow: var(--shadow-medium);
+  }
+  
+  .shadow-strong {
+    box-shadow: var(--shadow-strong);
+  }
+  
+  .shadow-elegant {
+    box-shadow: var(--shadow-elegant);
+  }
+  
+  /* Hover effects */
+  .hover-scale {
+    @apply hover:scale-[1.02] transition-transform duration-300;
+  }
+  
+  .hover-lift {
+    @apply hover:-translate-y-1 transition-transform duration-300;
+  }
+  
+  /* Gradient overlays */
+  .bg-gradient-overlay {
+    background: var(--gradient-overlay);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background: hsl(var(--primary) / 0.2);
+  color: hsl(var(--foreground));
 }
