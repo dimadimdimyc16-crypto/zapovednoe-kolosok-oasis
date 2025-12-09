@@ -61,6 +61,35 @@ export type Database = {
           },
         ]
       }
+      favorites: {
+        Row: {
+          created_at: string
+          house_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          house_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          house_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorites_house_id_fkey"
+            columns: ["house_id"]
+            isOneToOne: false
+            referencedRelation: "houses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gallery: {
         Row: {
           category: string | null
@@ -88,6 +117,75 @@ export type Database = {
           image_url?: string
           settlement?: Database["public"]["Enums"]["settlement_type"]
           title?: string
+        }
+        Relationships: []
+      }
+      houses: {
+        Row: {
+          advantages: Json | null
+          created_at: string
+          features: Json | null
+          floors: number
+          full_description: string | null
+          house_area_sqm: number
+          house_class: string
+          id: string
+          images: Json | null
+          infrastructure: Json | null
+          land_area_sqm: number
+          latitude: number | null
+          longitude: number | null
+          price_rub: number
+          rooms: number
+          settlement: Database["public"]["Enums"]["settlement_type"]
+          short_description: string | null
+          status: Database["public"]["Enums"]["plot_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          advantages?: Json | null
+          created_at?: string
+          features?: Json | null
+          floors?: number
+          full_description?: string | null
+          house_area_sqm: number
+          house_class?: string
+          id?: string
+          images?: Json | null
+          infrastructure?: Json | null
+          land_area_sqm: number
+          latitude?: number | null
+          longitude?: number | null
+          price_rub: number
+          rooms?: number
+          settlement: Database["public"]["Enums"]["settlement_type"]
+          short_description?: string | null
+          status?: Database["public"]["Enums"]["plot_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          advantages?: Json | null
+          created_at?: string
+          features?: Json | null
+          floors?: number
+          full_description?: string | null
+          house_area_sqm?: number
+          house_class?: string
+          id?: string
+          images?: Json | null
+          infrastructure?: Json | null
+          land_area_sqm?: number
+          latitude?: number | null
+          longitude?: number | null
+          price_rub?: number
+          rooms?: number
+          settlement?: Database["public"]["Enums"]["settlement_type"]
+          short_description?: string | null
+          status?: Database["public"]["Enums"]["plot_status"]
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -313,6 +411,59 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      viewing_requests: {
+        Row: {
+          created_at: string
+          email: string
+          house_id: string | null
+          id: string
+          message: string | null
+          name: string
+          phone: string
+          preferred_date: string | null
+          preferred_time: string | null
+          settlement: Database["public"]["Enums"]["settlement_type"]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          house_id?: string | null
+          id?: string
+          message?: string | null
+          name: string
+          phone: string
+          preferred_date?: string | null
+          preferred_time?: string | null
+          settlement: Database["public"]["Enums"]["settlement_type"]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          house_id?: string | null
+          id?: string
+          message?: string | null
+          name?: string
+          phone?: string
+          preferred_date?: string | null
+          preferred_time?: string | null
+          settlement?: Database["public"]["Enums"]["settlement_type"]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "viewing_requests_house_id_fkey"
+            columns: ["house_id"]
+            isOneToOne: false
+            referencedRelation: "houses"
             referencedColumns: ["id"]
           },
         ]
