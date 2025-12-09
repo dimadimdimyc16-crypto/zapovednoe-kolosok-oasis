@@ -74,10 +74,10 @@ export const Layout = ({ children, settlement }: LayoutProps) => {
 
   const navItems = [
     { path: `/${settlement}`, label: "Главная", icon: Home },
+    { path: `/${settlement}/houses`, label: "Дома" },
     { path: `/${settlement}/plots`, label: "Участки" },
     { path: `/${settlement}/about`, label: "О поселке" },
     { path: `/${settlement}/infrastructure`, label: "Инфраструктура" },
-    { path: `/${settlement}/gallery`, label: "Галерея" },
     { path: `/${settlement}/documents`, label: "Документы", icon: FileText },
     { path: `/${settlement}/news`, label: "Новости" },
     { path: `/${settlement}/contacts`, label: "Контакты" },
