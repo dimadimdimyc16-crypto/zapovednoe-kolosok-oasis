@@ -127,6 +127,8 @@ export type Database = {
           features: Json | null
           floors: number
           full_description: string | null
+          garage_spaces: number | null
+          has_garage: boolean | null
           house_area_sqm: number
           house_class: string
           id: string
@@ -149,6 +151,8 @@ export type Database = {
           features?: Json | null
           floors?: number
           full_description?: string | null
+          garage_spaces?: number | null
+          has_garage?: boolean | null
           house_area_sqm: number
           house_class?: string
           id?: string
@@ -171,6 +175,8 @@ export type Database = {
           features?: Json | null
           floors?: number
           full_description?: string | null
+          garage_spaces?: number | null
+          has_garage?: boolean | null
           house_area_sqm?: number
           house_class?: string
           id?: string
@@ -411,6 +417,35 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      viewed_houses: {
+        Row: {
+          house_id: string
+          id: string
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          house_id: string
+          id?: string
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          house_id?: string
+          id?: string
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "viewed_houses_house_id_fkey"
+            columns: ["house_id"]
+            isOneToOne: false
+            referencedRelation: "houses"
             referencedColumns: ["id"]
           },
         ]
