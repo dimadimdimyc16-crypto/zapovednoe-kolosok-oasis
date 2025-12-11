@@ -13,9 +13,11 @@ import About from "./pages/About";
 import Infrastructure from "./pages/Infrastructure";
 import Documents from "./pages/Documents";
 import News from "./pages/News";
+import NewsDetail from "./pages/NewsDetail";
 import Contacts from "./pages/Contacts";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,9 +41,11 @@ const App = () => (
           <Route path="/zapovednoe/infrastructure" element={<Infrastructure settlement="zapovednoe" />} />
           <Route path="/zapovednoe/documents" element={<Documents settlement="zapovednoe" />} />
           <Route path="/zapovednoe/news" element={<News settlement="zapovednoe" />} />
+          <Route path="/zapovednoe/news/:id" element={<NewsDetail settlement="zapovednoe" />} />
           <Route path="/zapovednoe/contacts" element={<Contacts settlement="zapovednoe" />} />
           <Route path="/zapovednoe/auth" element={<Auth settlement="zapovednoe" />} />
           <Route path="/zapovednoe/admin" element={<Admin settlement="zapovednoe" />} />
+          <Route path="/zapovednoe/profile" element={<Profile settlement="zapovednoe" />} />
           
           {/* Kolosok routes */}
           <Route path="/kolosok" element={<Kolosok />} />
@@ -53,9 +57,11 @@ const App = () => (
           <Route path="/kolosok/infrastructure" element={<Infrastructure settlement="kolosok" />} />
           <Route path="/kolosok/documents" element={<Documents settlement="kolosok" />} />
           <Route path="/kolosok/news" element={<News settlement="kolosok" />} />
+          <Route path="/kolosok/news/:id" element={<NewsDetail settlement="kolosok" />} />
           <Route path="/kolosok/contacts" element={<Contacts settlement="kolosok" />} />
           <Route path="/kolosok/auth" element={<Auth settlement="kolosok" />} />
           <Route path="/kolosok/admin" element={<Admin settlement="kolosok" />} />
+          <Route path="/kolosok/profile" element={<Profile settlement="kolosok" />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
