@@ -32,6 +32,7 @@ interface House {
 interface HouseCardProps {
   house: House;
   settlement: "zapovednoe" | "kolosok";
+  viewMode?: "grid" | "list";
 }
 
 const statusLabels = {
@@ -46,7 +47,7 @@ const classLabels = {
   premium: { label: "Премиум", color: "bg-purple-500" },
 };
 
-export const HouseCard = ({ house, settlement }: HouseCardProps) => {
+export const HouseCard = ({ house, settlement, viewMode = "grid" }: HouseCardProps) => {
   const navigate = useNavigate();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
