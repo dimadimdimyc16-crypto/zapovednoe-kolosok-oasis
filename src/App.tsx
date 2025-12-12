@@ -5,12 +5,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Zapovednoe from "./pages/Zapovednoe";
 import Kolosok from "./pages/Kolosok";
-import Plots from "./pages/Plots";
-import PlotDetail from "./pages/PlotDetail";
 import Houses from "./pages/Houses";
 import HouseDetail from "./pages/HouseDetail";
 import About from "./pages/About";
 import Infrastructure from "./pages/Infrastructure";
+import History from "./pages/History";
 import Documents from "./pages/Documents";
 import News from "./pages/News";
 import NewsDetail from "./pages/NewsDetail";
@@ -35,10 +34,9 @@ const App = () => (
           <Route path="/zapovednoe" element={<Zapovednoe />} />
           <Route path="/zapovednoe/houses" element={<Houses settlement="zapovednoe" />} />
           <Route path="/zapovednoe/houses/:id" element={<HouseDetail settlement="zapovednoe" />} />
-          <Route path="/zapovednoe/plots" element={<Plots settlement="zapovednoe" />} />
-          <Route path="/zapovednoe/plots/:id" element={<PlotDetail settlement="zapovednoe" />} />
           <Route path="/zapovednoe/about" element={<About settlement="zapovednoe" />} />
           <Route path="/zapovednoe/infrastructure" element={<Infrastructure settlement="zapovednoe" />} />
+          <Route path="/zapovednoe/history" element={<History settlement="zapovednoe" />} />
           <Route path="/zapovednoe/documents" element={<Documents settlement="zapovednoe" />} />
           <Route path="/zapovednoe/news" element={<News settlement="zapovednoe" />} />
           <Route path="/zapovednoe/news/:id" element={<NewsDetail settlement="zapovednoe" />} />
@@ -51,10 +49,9 @@ const App = () => (
           <Route path="/kolosok" element={<Kolosok />} />
           <Route path="/kolosok/houses" element={<Houses settlement="kolosok" />} />
           <Route path="/kolosok/houses/:id" element={<HouseDetail settlement="kolosok" />} />
-          <Route path="/kolosok/plots" element={<Plots settlement="kolosok" />} />
-          <Route path="/kolosok/plots/:id" element={<PlotDetail settlement="kolosok" />} />
           <Route path="/kolosok/about" element={<About settlement="kolosok" />} />
           <Route path="/kolosok/infrastructure" element={<Infrastructure settlement="kolosok" />} />
+          <Route path="/kolosok/history" element={<History settlement="kolosok" />} />
           <Route path="/kolosok/documents" element={<Documents settlement="kolosok" />} />
           <Route path="/kolosok/news" element={<News settlement="kolosok" />} />
           <Route path="/kolosok/news/:id" element={<NewsDetail settlement="kolosok" />} />
