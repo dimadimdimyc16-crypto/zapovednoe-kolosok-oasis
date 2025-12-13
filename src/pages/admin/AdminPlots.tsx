@@ -1,0 +1,398 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { AdminLayout } from "@/components/admin/AdminLayout";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { Plus, Pencil, Trash2, Search, MapPin } from "lucide-react";
+import type { Database } from "@/integrations/supabase/types";
+
+type Plot = Database["public"]["Tables"]["plots"]["Row"];
+
+export const AdminPlots = () => {
+  const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingPlot, setEditingPlot] = useState<Plot | null>(null);
+  const [formData, setFormData] = useState({
+    plot_number: "",
+    settlement: "zapovednoe" as "zapovednoe" | "kolosok",
+    price_rub: "",
+    area_sqm: "",
+    status: "available" as "available" | "reserved" | "sold",
+    cadastral_number: "",
+    description: "",
+  });
+
+  const { data: plots = [], isLoading } = useQuery({
+    queryKey: ["admin-plots"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("plots")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const { error } = await supabase.from("plots").insert(data);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-plots"] });
+      toast.success("Участок успешно добавлен");
+      resetForm();
+    },
+    onError: (error) => {
+      toast.error("Ошибка при добавлении: " + error.message);
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const { error } = await supabase
+        .from("plots")
+        .update(data)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-plots"] });
+      toast.success("Участок успешно обновлен");
+      resetForm();
+    },
+    onError: (error) => {
+      toast.error("Ошибка при обновлении: " + error.message);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("plots").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-plots"] });
+      toast.success("Участок удален");
+    },
+    onError: (error) => {
+      toast.error("Ошибка при удалении: " + error.message);
+    },
+  });
+
+  const resetForm = () => {
+    setFormData({
+      plot_number: "",
+      settlement: "zapovednoe",
+      price_rub: "",
+      area_sqm: "",
+      status: "available",
+      cadastral_number: "",
+      description: "",
+    });
+    setEditingPlot(null);
+    setIsDialogOpen(false);
+  };
+
+  const handleEdit = (plot: Plot) => {
+    setEditingPlot(plot);
+    setFormData({
+      plot_number: plot.plot_number,
+      settlement: plot.settlement,
+      price_rub: plot.price_rub.toString(),
+      area_sqm: plot.area_sqm.toString(),
+      status: plot.status,
+      cadastral_number: plot.cadastral_number || "",
+      description: plot.description || "",
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = () => {
+    const data = {
+      plot_number: formData.plot_number,
+      settlement: formData.settlement,
+      price_rub: parseFloat(formData.price_rub),
+      area_sqm: parseFloat(formData.area_sqm),
+      status: formData.status,
+      cadastral_number: formData.cadastral_number || null,
+      description: formData.description || null,
+    };
+
+    if (editingPlot) {
+      updateMutation.mutate({ id: editingPlot.id, data });
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
+  const filteredPlots = plots.filter((plot) =>
+    plot.plot_number.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("ru-RU").format(price) + " ₽";
+  };
+
+  const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
+    available: { label: "В продаже", variant: "default" },
+    reserved: { label: "Забронирован", variant: "secondary" },
+    sold: { label: "Продан", variant: "destructive" },
+  };
+
+  return (
+    <AdminLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-2">
+              <MapPin className="h-8 w-8" />
+              Управление участками
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Всего участков: {plots.length}
+            </p>
+          </div>
+
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => { resetForm(); setIsDialogOpen(true); }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Добавить участок
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingPlot ? "Редактирование участка" : "Добавление участка"}
+                </DialogTitle>
+              </DialogHeader>
+              
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Номер участка *</Label>
+                    <Input
+                      value={formData.plot_number}
+                      onChange={(e) => setFormData({ ...formData, plot_number: e.target.value })}
+                      placeholder="А-15"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Поселок *</Label>
+                    <Select
+                      value={formData.settlement}
+                      onValueChange={(v: "zapovednoe" | "kolosok") => 
+                        setFormData({ ...formData, settlement: v })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="zapovednoe">Заповедное</SelectItem>
+                        <SelectItem value="kolosok">Колосок</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Цена (₽) *</Label>
+                    <Input
+                      type="number"
+                      value={formData.price_rub}
+                      onChange={(e) => setFormData({ ...formData, price_rub: e.target.value })}
+                      placeholder="1500000"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Площадь (м²) *</Label>
+                    <Input
+                      type="number"
+                      value={formData.area_sqm}
+                      onChange={(e) => setFormData({ ...formData, area_sqm: e.target.value })}
+                      placeholder="1000"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Статус</Label>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(v: "available" | "reserved" | "sold") => 
+                        setFormData({ ...formData, status: v })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="available">В продаже</SelectItem>
+                        <SelectItem value="reserved">Забронирован</SelectItem>
+                        <SelectItem value="sold">Продан</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Кадастровый номер</Label>
+                    <Input
+                      value={formData.cadastral_number}
+                      onChange={(e) => setFormData({ ...formData, cadastral_number: e.target.value })}
+                      placeholder="50:00:0000000:0000"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Описание</Label>
+                  <Textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Описание участка..."
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <Button onClick={handleSubmit} className="flex-1">
+                    {editingPlot ? "Сохранить" : "Добавить"}
+                  </Button>
+                  <Button variant="outline" onClick={resetForm}>
+                    Отмена
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Search */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Поиск по номеру участка..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Table */}
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Номер</TableHead>
+                  <TableHead>Поселок</TableHead>
+                  <TableHead>Площадь</TableHead>
+                  <TableHead>Цена</TableHead>
+                  <TableHead>Кадастр</TableHead>
+                  <TableHead>Статус</TableHead>
+                  <TableHead className="text-right">Действия</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      Загрузка...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredPlots.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      Участки не найдены
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredPlots.map((plot) => (
+                    <TableRow key={plot.id}>
+                      <TableCell className="font-medium">{plot.plot_number}</TableCell>
+                      <TableCell>
+                        {plot.settlement === "zapovednoe" ? "Заповедное" : "Колосок"}
+                      </TableCell>
+                      <TableCell>{plot.area_sqm} м²</TableCell>
+                      <TableCell>{formatPrice(plot.price_rub)}</TableCell>
+                      <TableCell className="text-xs">
+                        {plot.cadastral_number || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusConfig[plot.status]?.variant || "default"}>
+                          {statusConfig[plot.status]?.label || plot.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(plot)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              if (confirm("Удалить этот участок?")) {
+                                deleteMutation.mutate(plot.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </AdminLayout>
+  );
+};
+
+export default AdminPlots;
