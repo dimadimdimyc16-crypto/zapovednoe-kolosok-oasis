@@ -120,6 +120,42 @@ export type Database = {
         }
         Relationships: []
       }
+      homepage_blocks: {
+        Row: {
+          block_order: number
+          block_type: string
+          content: Json | null
+          created_at: string | null
+          id: string
+          is_enabled: boolean | null
+          settings: Json | null
+          settlement: Database["public"]["Enums"]["settlement_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          block_order?: number
+          block_type: string
+          content?: Json | null
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          settings?: Json | null
+          settlement: Database["public"]["Enums"]["settlement_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          block_order?: number
+          block_type?: string
+          content?: Json | null
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          settings?: Json | null
+          settlement?: Database["public"]["Enums"]["settlement_type"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       houses: {
         Row: {
           advantages: Json | null
@@ -244,6 +280,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      page_settings: {
+        Row: {
+          content: Json | null
+          created_at: string | null
+          id: string
+          is_published: boolean | null
+          meta_description: string | null
+          meta_keywords: string | null
+          page_slug: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string | null
+          id?: string
+          is_published?: boolean | null
+          meta_description?: string | null
+          meta_keywords?: string | null
+          page_slug: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string | null
+          id?: string
+          is_published?: boolean | null
+          meta_description?: string | null
+          meta_keywords?: string | null
+          page_slug?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       plots: {
         Row: {
