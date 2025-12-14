@@ -72,6 +72,13 @@ export const AdminNews = () => {
     },
   });
 
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin-news"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-news-count"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-recent-news"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-table-stats"] });
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -82,7 +89,7 @@ export const AdminNews = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-news"] });
+      invalidateAll();
       toast.success("Новость успешно добавлена");
       resetForm();
     },
@@ -100,7 +107,7 @@ export const AdminNews = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-news"] });
+      invalidateAll();
       toast.success("Новость успешно обновлена");
       resetForm();
     },

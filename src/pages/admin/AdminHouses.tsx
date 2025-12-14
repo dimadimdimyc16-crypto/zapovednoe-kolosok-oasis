@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,18 +29,46 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, Building } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Building, Loader2 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
+import { z } from "zod";
 
 type House = Database["public"]["Tables"]["houses"]["Row"];
+
+const houseSchema = z.object({
+  title: z.string().min(3, "Название должно содержать минимум 3 символа"),
+  settlement: z.enum(["zapovednoe", "kolosok"]),
+  price_rub: z.string().min(1, "Укажите цену").refine(val => !isNaN(Number(val)) && Number(val) > 0, "Цена должна быть положительным числом"),
+  house_area_sqm: z.string().min(1, "Укажите площадь дома").refine(val => !isNaN(Number(val)) && Number(val) > 0, "Площадь должна быть положительным числом"),
+  land_area_sqm: z.string().min(1, "Укажите площадь участка").refine(val => !isNaN(Number(val)) && Number(val) > 0, "Площадь должна быть положительным числом"),
+  rooms: z.string(),
+  floors: z.string(),
+  house_class: z.string(),
+  status: z.enum(["available", "reserved", "sold"]),
+  short_description: z.string(),
+  full_description: z.string(),
+});
 
 export const AdminHouses = () => {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingHouse, setEditingHouse] = useState<House | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     title: "",
     settlement: "zapovednoe" as "zapovednoe" | "kolosok",
@@ -69,13 +97,19 @@ export const AdminHouses = () => {
     },
   });
 
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin-houses"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-houses-count"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-table-stats"] });
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const { error } = await supabase.from("houses").insert(data);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-houses"] });
+      invalidateAll();
       toast.success("Дом успешно добавлен");
       resetForm();
     },
@@ -93,7 +127,7 @@ export const AdminHouses = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-houses"] });
+      invalidateAll();
       toast.success("Дом успешно обновлен");
       resetForm();
     },
@@ -108,7 +142,7 @@ export const AdminHouses = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-houses"] });
+      invalidateAll();
       toast.success("Дом удален");
     },
     onError: (error) => {
@@ -134,6 +168,7 @@ export const AdminHouses = () => {
     });
     setEditingHouse(null);
     setIsDialogOpen(false);
+    setErrors({});
   };
 
   const handleEdit = (house: House) => {
@@ -153,10 +188,32 @@ export const AdminHouses = () => {
       has_garage: house.has_garage || false,
       garage_spaces: (house.garage_spaces || 0).toString(),
     });
+    setErrors({});
     setIsDialogOpen(true);
   };
 
+  const validateForm = () => {
+    const result = houseSchema.safeParse(formData);
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        if (err.path[0]) {
+          fieldErrors[err.path[0] as string] = err.message;
+        }
+      });
+      setErrors(fieldErrors);
+      return false;
+    }
+    setErrors({});
+    return true;
+  };
+
   const handleSubmit = () => {
+    if (!validateForm()) {
+      toast.error("Проверьте правильность заполнения полей");
+      return;
+    }
+
     const data = {
       title: formData.title,
       settlement: formData.settlement,
@@ -167,8 +224,8 @@ export const AdminHouses = () => {
       floors: parseInt(formData.floors),
       house_class: formData.house_class,
       status: formData.status,
-      short_description: formData.short_description,
-      full_description: formData.full_description,
+      short_description: formData.short_description || null,
+      full_description: formData.full_description || null,
       has_garage: formData.has_garage,
       garage_spaces: parseInt(formData.garage_spaces),
     };
@@ -180,9 +237,11 @@ export const AdminHouses = () => {
     }
   };
 
-  const filteredHouses = houses.filter((house) =>
-    house.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredHouses = houses.filter((house) => {
+    const matchesSearch = house.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || house.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ru-RU").format(price) + " ₽";
@@ -193,6 +252,8 @@ export const AdminHouses = () => {
     reserved: { label: "Забронирован", variant: "secondary" },
     sold: { label: "Продан", variant: "destructive" },
   };
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   return (
     <AdminLayout>
@@ -205,7 +266,9 @@ export const AdminHouses = () => {
               Управление домами
             </h1>
             <p className="text-muted-foreground mt-1">
-              Всего объектов: {houses.length}
+              Всего объектов: {houses.length} | 
+              В продаже: {houses.filter(h => h.status === 'available').length} | 
+              Продано: {houses.filter(h => h.status === 'sold').length}
             </p>
           </div>
 
@@ -231,7 +294,9 @@ export const AdminHouses = () => {
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       placeholder="Название дома"
+                      className={errors.title ? "border-destructive" : ""}
                     />
+                    {errors.title && <p className="text-xs text-destructive">{errors.title}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label>Поселок *</Label>
@@ -260,7 +325,9 @@ export const AdminHouses = () => {
                       value={formData.price_rub}
                       onChange={(e) => setFormData({ ...formData, price_rub: e.target.value })}
                       placeholder="10000000"
+                      className={errors.price_rub ? "border-destructive" : ""}
                     />
+                    {errors.price_rub && <p className="text-xs text-destructive">{errors.price_rub}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label>Статус</Label>
@@ -290,7 +357,9 @@ export const AdminHouses = () => {
                       value={formData.house_area_sqm}
                       onChange={(e) => setFormData({ ...formData, house_area_sqm: e.target.value })}
                       placeholder="200"
+                      className={errors.house_area_sqm ? "border-destructive" : ""}
                     />
+                    {errors.house_area_sqm && <p className="text-xs text-destructive">{errors.house_area_sqm}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label>Площадь участка (м²) *</Label>
@@ -299,7 +368,9 @@ export const AdminHouses = () => {
                       value={formData.land_area_sqm}
                       onChange={(e) => setFormData({ ...formData, land_area_sqm: e.target.value })}
                       placeholder="1000"
+                      className={errors.land_area_sqm ? "border-destructive" : ""}
                     />
+                    {errors.land_area_sqm && <p className="text-xs text-destructive">{errors.land_area_sqm}</p>}
                   </div>
                 </div>
 
@@ -359,7 +430,8 @@ export const AdminHouses = () => {
                 </div>
 
                 <div className="flex gap-4 pt-4">
-                  <Button onClick={handleSubmit} className="flex-1">
+                  <Button onClick={handleSubmit} className="flex-1" disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     {editingHouse ? "Сохранить" : "Добавить"}
                   </Button>
                   <Button variant="outline" onClick={resetForm}>
@@ -371,17 +443,30 @@ export const AdminHouses = () => {
           </Dialog>
         </div>
 
-        {/* Search */}
+        {/* Search and Filters */}
         <Card>
           <CardContent className="pt-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Поиск по названию..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Поиск по названию..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Статус" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все статусы</SelectItem>
+                  <SelectItem value="available">В продаже</SelectItem>
+                  <SelectItem value="reserved">Забронирован</SelectItem>
+                  <SelectItem value="sold">Продан</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -405,7 +490,7 @@ export const AdminHouses = () => {
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8">
-                      Загрузка...
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : filteredHouses.length === 0 ? (
@@ -438,17 +523,30 @@ export const AdminHouses = () => {
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              if (confirm("Удалить этот дом?")) {
-                                deleteMutation.mutate(house.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Удалить дом?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Это действие нельзя отменить. Дом "{house.title}" будет удален навсегда.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Отмена</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteMutation.mutate(house.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Удалить
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>
