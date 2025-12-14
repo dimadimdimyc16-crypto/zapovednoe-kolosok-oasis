@@ -68,10 +68,13 @@ const menuItems = [
     label: "Пользователи", 
     href: "/admin/users" 
   },
-  { 
-    icon: Settings, 
-    label: "Настройки", 
-    href: "/admin/settings" 
+  {
+    icon: Settings,
+    label: "Система",
+    children: [
+      { label: "Настройки", href: "/admin/settings" },
+      { label: "База данных", href: "/admin/database" },
+    ],
   },
 ];
 
