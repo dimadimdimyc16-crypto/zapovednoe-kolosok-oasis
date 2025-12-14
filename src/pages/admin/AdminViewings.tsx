@@ -44,6 +44,9 @@ export const AdminViewings = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-viewings"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-viewing-count"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-recent-viewings"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-table-stats"] });
       toast.success("Статус заявки обновлен");
     },
     onError: (error) => {

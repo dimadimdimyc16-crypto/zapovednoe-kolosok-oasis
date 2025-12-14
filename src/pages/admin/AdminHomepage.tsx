@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -26,6 +26,9 @@ import {
   Building,
   MessageSquare,
   Save,
+  ChevronUp,
+  ChevronDown,
+  Loader2,
 } from "lucide-react";
 
 const blockTypes = [
@@ -56,7 +59,7 @@ export const AdminHomepage = () => {
 
   const createBlockMutation = useMutation({
     mutationFn: async (blockType: string) => {
-      const maxOrder = Math.max(...blocks.map((b: any) => b.block_order), -1);
+      const maxOrder = blocks.length > 0 ? Math.max(...blocks.map((b: any) => b.block_order)) : -1;
       const { error } = await supabase.from("homepage_blocks").insert({
         settlement,
         block_type: blockType,
@@ -69,6 +72,9 @@ export const AdminHomepage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["homepage-blocks"] });
       toast.success("Блок добавлен");
+    },
+    onError: (error) => {
+      toast.error("Ошибка: " + error.message);
     },
   });
 
@@ -84,6 +90,9 @@ export const AdminHomepage = () => {
       queryClient.invalidateQueries({ queryKey: ["homepage-blocks"] });
       toast.success("Блок обновлен");
     },
+    onError: (error) => {
+      toast.error("Ошибка: " + error.message);
+    },
   });
 
   const deleteBlockMutation = useMutation({
@@ -97,6 +106,24 @@ export const AdminHomepage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["homepage-blocks"] });
       toast.success("Блок удален");
+    },
+    onError: (error) => {
+      toast.error("Ошибка: " + error.message);
+    },
+  });
+
+  const reorderMutation = useMutation({
+    mutationFn: async (updates: { id: string; block_order: number }[]) => {
+      for (const update of updates) {
+        const { error } = await supabase
+          .from("homepage_blocks")
+          .update({ block_order: update.block_order })
+          .eq("id", update.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["homepage-blocks"] });
     },
   });
 
@@ -140,6 +167,23 @@ export const AdminHomepage = () => {
     }
   };
 
+  const moveBlock = useCallback((index: number, direction: "up" | "down") => {
+    if (
+      (direction === "up" && index === 0) ||
+      (direction === "down" && index === blocks.length - 1)
+    ) {
+      return;
+    }
+
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    const updates = [
+      { id: blocks[index].id, block_order: blocks[newIndex].block_order },
+      { id: blocks[newIndex].id, block_order: blocks[index].block_order },
+    ];
+
+    reorderMutation.mutate(updates);
+  }, [blocks, reorderMutation]);
+
   const toggleBlock = (id: string, isEnabled: boolean) => {
     updateBlockMutation.mutate({ id, data: { is_enabled: isEnabled } });
   };
@@ -160,7 +204,7 @@ export const AdminHomepage = () => {
               Конструктор главной страницы
             </h1>
             <p className="text-muted-foreground mt-1">
-              Управление блоками главной страницы
+              Управление блоками главной страницы ({blocks.length} блоков)
             </p>
           </div>
 
@@ -190,6 +234,7 @@ export const AdminHomepage = () => {
                   key={type.value}
                   variant="outline"
                   onClick={() => createBlockMutation.mutate(type.value)}
+                  disabled={createBlockMutation.isPending}
                 >
                   <type.icon className="h-4 w-4 mr-2" />
                   {type.label}
@@ -202,15 +247,15 @@ export const AdminHomepage = () => {
         {/* Blocks List */}
         <div className="space-y-4">
           {isLoading ? (
-            <Card className="p-8 text-center text-muted-foreground">
-              Загрузка...
+            <Card className="p-8 text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
             </Card>
           ) : blocks.length === 0 ? (
             <Card className="p-8 text-center text-muted-foreground">
               Нет блоков. Добавьте первый блок выше.
             </Card>
           ) : (
-            blocks.map((block: any) => {
+            blocks.map((block: any, index: number) => {
               const blockType = blockTypes.find((t) => t.value === block.block_type);
               const BlockIcon = blockType?.icon || Layout;
               const content = block.content || {};
@@ -220,17 +265,45 @@ export const AdminHomepage = () => {
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <GripVertical className="h-5 w-5 text-muted-foreground cursor-move" />
+                        <div className="flex flex-col gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => moveBlock(index, "up")}
+                            disabled={index === 0 || reorderMutation.isPending}
+                          >
+                            <ChevronUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => moveBlock(index, "down")}
+                            disabled={index === blocks.length - 1 || reorderMutation.isPending}
+                          >
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <GripVertical className="h-5 w-5 text-muted-foreground" />
                         <BlockIcon className="h-5 w-5" />
-                        <CardTitle className="text-lg">
-                          {blockType?.label || block.block_type}
-                        </CardTitle>
+                        <div>
+                          <CardTitle className="text-lg">
+                            {blockType?.label || block.block_type}
+                          </CardTitle>
+                          <p className="text-xs text-muted-foreground">
+                            Порядок: {block.block_order + 1}
+                          </p>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Switch
-                          checked={block.is_enabled}
-                          onCheckedChange={(checked) => toggleBlock(block.id, checked)}
-                        />
+                        <div className="flex items-center gap-2">
+                          <Label className="text-sm">Активен</Label>
+                          <Switch
+                            checked={block.is_enabled}
+                            onCheckedChange={(checked) => toggleBlock(block.id, checked)}
+                          />
+                        </div>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -251,11 +324,15 @@ export const AdminHomepage = () => {
                         block={block}
                         onSave={(content) => saveBlockContent(block.id, content)}
                         onCancel={() => setEditingBlock(null)}
+                        isLoading={updateBlockMutation.isPending}
                       />
                     ) : (
                       <div className="flex items-center justify-between">
-                        <div className="text-sm text-muted-foreground">
-                          {content.title && <span>Заголовок: {content.title}</span>}
+                        <div className="text-sm text-muted-foreground space-y-1">
+                          {content.title && <p><strong>Заголовок:</strong> {content.title}</p>}
+                          {content.subtitle && <p><strong>Подзаголовок:</strong> {content.subtitle}</p>}
+                          {content.buttonText && <p><strong>Кнопка:</strong> {content.buttonText}</p>}
+                          {content.showCount && <p><strong>Кол-во объектов:</strong> {content.showCount}</p>}
                         </div>
                         <Button
                           variant="outline"
@@ -281,10 +358,12 @@ const BlockEditor = ({
   block,
   onSave,
   onCancel,
+  isLoading,
 }: {
   block: any;
   onSave: (content: any) => void;
   onCancel: () => void;
+  isLoading: boolean;
 }) => {
   const [content, setContent] = useState(block.content || {});
 
@@ -365,13 +444,31 @@ const BlockEditor = ({
               onChange={(e) => updateField("title", e.target.value)}
             />
           </div>
-          <div className="space-y-2">
-            <Label>Количество объектов</Label>
-            <Input
-              type="number"
-              value={content.showCount || 6}
-              onChange={(e) => updateField("showCount", parseInt(e.target.value))}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Количество объектов</Label>
+              <Input
+                type="number"
+                value={content.showCount || 6}
+                onChange={(e) => updateField("showCount", parseInt(e.target.value))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Фильтр по статусу</Label>
+              <Select
+                value={content.filterByStatus || "available"}
+                onValueChange={(v) => updateField("filterByStatus", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все</SelectItem>
+                  <SelectItem value="available">В продаже</SelectItem>
+                  <SelectItem value="reserved">Забронированы</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </>
       )}
@@ -422,8 +519,12 @@ const BlockEditor = ({
       )}
 
       <div className="flex gap-2 pt-4">
-        <Button onClick={() => onSave(content)}>
-          <Save className="h-4 w-4 mr-2" />
+        <Button onClick={() => onSave(content)} disabled={isLoading}>
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4 mr-2" />
+          )}
           Сохранить
         </Button>
         <Button variant="outline" onClick={onCancel}>

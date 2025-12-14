@@ -29,18 +29,40 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, MapPin, Loader2 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
+import { z } from "zod";
 
 type Plot = Database["public"]["Tables"]["plots"]["Row"];
+
+const plotSchema = z.object({
+  plot_number: z.string().min(1, "Укажите номер участка"),
+  settlement: z.enum(["zapovednoe", "kolosok"]),
+  price_rub: z.string().min(1, "Укажите цену").refine(val => !isNaN(Number(val)) && Number(val) > 0, "Цена должна быть положительным числом"),
+  area_sqm: z.string().min(1, "Укажите площадь").refine(val => !isNaN(Number(val)) && Number(val) > 0, "Площадь должна быть положительным числом"),
+  status: z.enum(["available", "reserved", "sold"]),
+});
 
 export const AdminPlots = () => {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPlot, setEditingPlot] = useState<Plot | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     plot_number: "",
     settlement: "zapovednoe" as "zapovednoe" | "kolosok",
@@ -63,13 +85,19 @@ export const AdminPlots = () => {
     },
   });
 
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin-plots"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-plots-count"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-table-stats"] });
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const { error } = await supabase.from("plots").insert(data);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-plots"] });
+      invalidateAll();
       toast.success("Участок успешно добавлен");
       resetForm();
     },
@@ -87,7 +115,7 @@ export const AdminPlots = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-plots"] });
+      invalidateAll();
       toast.success("Участок успешно обновлен");
       resetForm();
     },
@@ -102,7 +130,7 @@ export const AdminPlots = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-plots"] });
+      invalidateAll();
       toast.success("Участок удален");
     },
     onError: (error) => {
@@ -122,6 +150,7 @@ export const AdminPlots = () => {
     });
     setEditingPlot(null);
     setIsDialogOpen(false);
+    setErrors({});
   };
 
   const handleEdit = (plot: Plot) => {
@@ -135,10 +164,32 @@ export const AdminPlots = () => {
       cadastral_number: plot.cadastral_number || "",
       description: plot.description || "",
     });
+    setErrors({});
     setIsDialogOpen(true);
   };
 
+  const validateForm = () => {
+    const result = plotSchema.safeParse(formData);
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        if (err.path[0]) {
+          fieldErrors[err.path[0] as string] = err.message;
+        }
+      });
+      setErrors(fieldErrors);
+      return false;
+    }
+    setErrors({});
+    return true;
+  };
+
   const handleSubmit = () => {
+    if (!validateForm()) {
+      toast.error("Проверьте правильность заполнения полей");
+      return;
+    }
+
     const data = {
       plot_number: formData.plot_number,
       settlement: formData.settlement,
@@ -156,9 +207,11 @@ export const AdminPlots = () => {
     }
   };
 
-  const filteredPlots = plots.filter((plot) =>
-    plot.plot_number.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPlots = plots.filter((plot) => {
+    const matchesSearch = plot.plot_number.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || plot.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("ru-RU").format(price) + " ₽";
@@ -169,6 +222,8 @@ export const AdminPlots = () => {
     reserved: { label: "Забронирован", variant: "secondary" },
     sold: { label: "Продан", variant: "destructive" },
   };
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   return (
     <AdminLayout>
@@ -181,7 +236,9 @@ export const AdminPlots = () => {
               Управление участками
             </h1>
             <p className="text-muted-foreground mt-1">
-              Всего участков: {plots.length}
+              Всего участков: {plots.length} | 
+              В продаже: {plots.filter(p => p.status === 'available').length} | 
+              Продано: {plots.filter(p => p.status === 'sold').length}
             </p>
           </div>
 
@@ -207,7 +264,9 @@ export const AdminPlots = () => {
                       value={formData.plot_number}
                       onChange={(e) => setFormData({ ...formData, plot_number: e.target.value })}
                       placeholder="А-15"
+                      className={errors.plot_number ? "border-destructive" : ""}
                     />
+                    {errors.plot_number && <p className="text-xs text-destructive">{errors.plot_number}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label>Поселок *</Label>
@@ -236,7 +295,9 @@ export const AdminPlots = () => {
                       value={formData.price_rub}
                       onChange={(e) => setFormData({ ...formData, price_rub: e.target.value })}
                       placeholder="1500000"
+                      className={errors.price_rub ? "border-destructive" : ""}
                     />
+                    {errors.price_rub && <p className="text-xs text-destructive">{errors.price_rub}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label>Площадь (м²) *</Label>
@@ -245,7 +306,9 @@ export const AdminPlots = () => {
                       value={formData.area_sqm}
                       onChange={(e) => setFormData({ ...formData, area_sqm: e.target.value })}
                       placeholder="1000"
+                      className={errors.area_sqm ? "border-destructive" : ""}
                     />
+                    {errors.area_sqm && <p className="text-xs text-destructive">{errors.area_sqm}</p>}
                   </div>
                 </div>
 
@@ -289,7 +352,8 @@ export const AdminPlots = () => {
                 </div>
 
                 <div className="flex gap-4 pt-4">
-                  <Button onClick={handleSubmit} className="flex-1">
+                  <Button onClick={handleSubmit} className="flex-1" disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     {editingPlot ? "Сохранить" : "Добавить"}
                   </Button>
                   <Button variant="outline" onClick={resetForm}>
@@ -301,17 +365,30 @@ export const AdminPlots = () => {
           </Dialog>
         </div>
 
-        {/* Search */}
+        {/* Search and Filters */}
         <Card>
           <CardContent className="pt-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Поиск по номеру участка..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Поиск по номеру участка..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Статус" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все статусы</SelectItem>
+                  <SelectItem value="available">В продаже</SelectItem>
+                  <SelectItem value="reserved">Забронирован</SelectItem>
+                  <SelectItem value="sold">Продан</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -335,7 +412,7 @@ export const AdminPlots = () => {
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8">
-                      Загрузка...
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : filteredPlots.length === 0 ? (
@@ -370,17 +447,30 @@ export const AdminPlots = () => {
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              if (confirm("Удалить этот участок?")) {
-                                deleteMutation.mutate(plot.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Удалить участок?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Это действие нельзя отменить. Участок №{plot.plot_number} будет удален навсегда.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Отмена</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteMutation.mutate(plot.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Удалить
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>

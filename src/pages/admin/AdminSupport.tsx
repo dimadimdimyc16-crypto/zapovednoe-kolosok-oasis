@@ -45,6 +45,8 @@ export const AdminSupport = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-support"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-support-count"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-table-stats"] });
       toast.success("Обращение обновлено");
       setSelectedRequest(null);
       setResponse("");
