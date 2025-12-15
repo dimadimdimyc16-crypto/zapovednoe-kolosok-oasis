@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Phone, Mail, MapPin, Clock, Send, MessageCircle, Navigation } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, Send, MessageCircle } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -176,7 +176,7 @@ const Contacts = ({ settlement }: ContactsProps) => {
             {/* Address Info */}
             <div className="space-y-8">
               <div>
-                <h2 className="text-3xl font-bold mb-6">Как нас найти</h2>
+                <h2 className="text-3xl font-bold mb-6">Контактная информация</h2>
                 
                 <Card className="p-6 mb-6">
                   <div className="flex items-start gap-4">
@@ -193,35 +193,36 @@ const Contacts = ({ settlement }: ContactsProps) => {
                 <Card className="p-6 mb-6">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Navigation className="w-6 h-6 text-primary" />
+                      <Phone className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-lg mb-2">Как добраться</h3>
-                      <p className="text-muted-foreground">{data.directions}</p>
+                      <h3 className="font-bold text-lg mb-2">Телефон</h3>
+                      <a 
+                        href={`tel:${data.phone.replace(/[^\d+]/g, '')}`}
+                        className="text-primary hover:underline"
+                      >
+                        {data.phone}
+                      </a>
                     </div>
                   </div>
                 </Card>
 
-                {/* Map placeholder */}
-                <div className="relative h-[300px] rounded-2xl overflow-hidden bg-muted">
-                  <img 
-                    src={`https://images.unsplash.com/photo-1569336415962-a4bd9f69cd83?w=800`}
-                    alt="Карта"
-                    className="w-full h-full object-cover opacity-50"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Button size="lg" asChild>
+                <Card className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <Mail className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg mb-2">Email</h3>
                       <a 
-                        href={`https://yandex.ru/maps/?text=${encodeURIComponent(data.address)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        href={`mailto:${data.email}`}
+                        className="text-primary hover:underline"
                       >
-                        <MapPin className="mr-2 w-5 h-5" />
-                        Открыть на карте
+                        {data.email}
                       </a>
-                    </Button>
+                    </div>
                   </div>
-                </div>
+                </Card>
               </div>
             </div>
 
