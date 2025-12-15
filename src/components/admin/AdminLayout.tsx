@@ -18,6 +18,7 @@ import {
   ChevronDown,
   Building,
   MapPin,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -240,13 +241,23 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
         </nav>
 
         {/* Footer */}
-        <div className="border-t p-4">
+        <div className="border-t p-4 space-y-3">
           {isSidebarOpen && userProfile && (
-            <div className="mb-3 text-sm">
+            <div className="text-sm">
               <p className="font-medium truncate">{userProfile.full_name}</p>
               <p className="text-muted-foreground truncate text-xs">{userProfile.email}</p>
             </div>
           )}
+          <Link
+            to="/zapovednoe"
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors",
+              "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+            )}
+          >
+            <ExternalLink className="h-4 w-4 shrink-0" />
+            {isSidebarOpen && <span>Вернуться на сайт</span>}
+          </Link>
           <Button
             variant="ghost"
             size={isSidebarOpen ? "default" : "icon"}
