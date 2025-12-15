@@ -30,6 +30,7 @@ import {
   ChevronDown,
   Loader2,
 } from "lucide-react";
+import { ImageUpload } from "@/components/admin/ImageUpload";
 
 const blockTypes = [
   { value: "hero", label: "Hero-блок", icon: Image },
@@ -405,13 +406,12 @@ const BlockEditor = ({
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label>URL фонового изображения</Label>
-            <Input
-              value={content.backgroundImage || ""}
-              onChange={(e) => updateField("backgroundImage", e.target.value)}
-            />
-          </div>
+          <ImageUpload
+            value={content.backgroundImage || ""}
+            onChange={(url) => updateField("backgroundImage", url)}
+            label="Фоновое изображение"
+            folder="homepage"
+          />
         </>
       )}
 
@@ -507,13 +507,12 @@ const BlockEditor = ({
             </div>
           </div>
           {block.block_type === "banner" && (
-            <div className="space-y-2">
-              <Label>URL изображения</Label>
-              <Input
-                value={content.imageUrl || ""}
-                onChange={(e) => updateField("imageUrl", e.target.value)}
-              />
-            </div>
+            <ImageUpload
+              value={content.imageUrl || ""}
+              onChange={(url) => updateField("imageUrl", url)}
+              label="Изображение баннера"
+              folder="homepage"
+            />
           )}
         </>
       )}

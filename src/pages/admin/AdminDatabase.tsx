@@ -33,6 +33,7 @@ export const AdminDatabase = () => {
     { name: "gallery", displayName: "Галерея" },
     { name: "homepage_blocks", displayName: "Блоки главной" },
     { name: "page_settings", displayName: "Настройки страниц" },
+    { name: "site_settings", displayName: "Настройки сайта" },
   ];
 
   const { data: tableStats = [], refetch: refetchStats, isLoading: isLoadingStats } = useQuery({

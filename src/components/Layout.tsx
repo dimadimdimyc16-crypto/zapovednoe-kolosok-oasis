@@ -1,5 +1,6 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { 
   Phone, 
@@ -27,11 +28,45 @@ interface LayoutProps {
   settlement: "zapovednoe" | "kolosok";
 }
 
+const fallbackData = {
+  zapovednoe: {
+    name: "ДПК Заповедное",
+    shortName: "Заповедное",
+    description: "Премиум коттеджный поселок в экологически чистом районе",
+    phone: "+7 (495) 123-45-67",
+    email: "info@zapovednoe.ru",
+    address: "Московская область, Истринский район",
+  },
+  kolosok: {
+    name: "ДПК Колосок",
+    shortName: "Колосок",
+    description: "Уютный семейный поселок с развитой инфраструктурой",
+    phone: "+7 (495) 765-43-21",
+    email: "info@kolosok-dpk.ru",
+    address: "Московская область, Чеховский район",
+  },
+};
+
 export const Layout = ({ children, settlement }: LayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
+
+  // Fetch settings from database
+  const { data: settings } = useQuery({
+    queryKey: ["site-settings", settlement],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_settings")
+        .select("*")
+        .eq("settlement", settlement)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 1000 * 60 * 5, // 5 min cache
+  });
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -52,25 +87,16 @@ export const Layout = ({ children, settlement }: LayoutProps) => {
     navigate(`/${settlement}`);
   };
 
-  const settlementData = {
-    zapovednoe: {
-      name: "ДПК Заповедное",
-      shortName: "Заповедное",
-      description: "Премиум коттеджный поселок в экологически чистом районе",
-      phone: "+7 (900) 000-00-00",
-      email: "info@dpk-zapovednoe.ru",
-    },
-    kolosok: {
-      name: "ДПК Колосок",
-      shortName: "Колосок",
-      description: "Уютный семейный поселок с развитой инфраструктурой",
-      phone: "+7 (900) 111-11-11",
-      email: "info@dpk-kolosok.ru",
-    },
+  // Use settings from DB or fallback
+  const fallback = fallbackData[settlement];
+  const currentSettlement = {
+    name: settings?.site_name || fallback.name,
+    shortName: settlement === "zapovednoe" ? "Заповедное" : "Колосок",
+    description: settings?.site_description || fallback.description,
+    phone: settings?.contact_phone || fallback.phone,
+    email: settings?.contact_email || fallback.email,
+    address: settings?.address || fallback.address,
   };
-
-  const currentSettlement = settlementData[settlement];
-  const otherSettlement = settlement === "zapovednoe" ? "kolosok" : "zapovednoe";
 
   const navItems = [
     { path: `/${settlement}`, label: "Главная", icon: Home },
@@ -102,7 +128,7 @@ export const Layout = ({ children, settlement }: LayoutProps) => {
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-4 md:gap-6">
               <a 
-                href={`tel:${currentSettlement.phone}`} 
+                href={`tel:${currentSettlement.phone.replace(/[^\d+]/g, '')}`} 
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity"
               >
                 <Phone className="w-4 h-4" />
@@ -214,7 +240,7 @@ export const Layout = ({ children, settlement }: LayoutProps) => {
                 </Button>
               )}
               <Button size="sm" asChild className="shadow-soft">
-                <a href={`tel:${currentSettlement.phone}`}>
+                <a href={`tel:${currentSettlement.phone.replace(/[^\d+]/g, '')}`}>
                   <Phone className="w-4 h-4 mr-2" />
                   Позвонить
                 </a>
@@ -291,7 +317,7 @@ export const Layout = ({ children, settlement }: LayoutProps) => {
                   </Button>
                 )}
                 <Button className="w-full" asChild>
-                  <a href={`tel:${currentSettlement.phone}`}>
+                  <a href={`tel:${currentSettlement.phone.replace(/[^\d+]/g, '')}`}>
                     <Phone className="w-4 h-4 mr-2" />
                     Позвонить
                   </a>
@@ -381,7 +407,7 @@ export const Layout = ({ children, settlement }: LayoutProps) => {
               <ul className="space-y-3 text-sm">
                 <li className="flex items-center gap-2 opacity-80">
                   <Phone className="w-4 h-4" />
-                  <a href={`tel:${currentSettlement.phone}`} className="hover:opacity-100">
+                  <a href={`tel:${currentSettlement.phone.replace(/[^\d+]/g, '')}`} className="hover:opacity-100">
                     {currentSettlement.phone}
                   </a>
                 </li>
@@ -393,7 +419,7 @@ export const Layout = ({ children, settlement }: LayoutProps) => {
                 </li>
                 <li className="flex items-start gap-2 opacity-80">
                   <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <span>Московская область, Серпуховский район</span>
+                  <span>{currentSettlement.address}</span>
                 </li>
               </ul>
             </div>

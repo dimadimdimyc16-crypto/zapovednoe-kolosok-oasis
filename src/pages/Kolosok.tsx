@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { HouseCard } from "@/components/HouseCard";
+import { SEOHead } from "@/components/SEOHead";
 
 const Kolosok = () => {
   const { data: featuredHouses } = useQuery({
@@ -36,6 +37,21 @@ const Kolosok = () => {
       return data;
     }
   });
+
+  const { data: settings } = useQuery({
+    queryKey: ['site-settings', 'kolosok'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('*')
+        .eq('settlement', 'kolosok')
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const phone = settings?.contact_phone || '+7 (495) 765-43-21';
 
   const advantages = [
     {
@@ -85,6 +101,7 @@ const Kolosok = () => {
 
   return (
     <Layout settlement="kolosok">
+      <SEOHead pageSlug="/kolosok" />
       {/* Hero Section */}
       <section className="relative h-[85vh] min-h-[600px] flex items-center justify-center overflow-hidden">
         <div
@@ -119,9 +136,9 @@ const Kolosok = () => {
                 </Link>
               </Button>
               <Button size="lg" variant="outline" asChild className="text-lg h-14 px-8 bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm">
-                <a href="tel:+74957654321">
+                <a href={`tel:${phone.replace(/[^\d+]/g, '')}`}>
                   <Phone className="mr-2 w-5 h-5" />
-                  +7 (495) 765-43-21
+                  {phone}
                 </a>
               </Button>
             </div>
