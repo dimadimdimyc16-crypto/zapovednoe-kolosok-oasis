@@ -38,8 +38,8 @@ const Admin = ({ settlement }: AdminProps) => {
       return;
     }
 
-    // Redirect to admin dashboard
-    navigate(`/${settlement}/admin/dashboard`, { replace: true });
+    // Redirect to main admin dashboard
+    navigate('/admin', { replace: true });
   };
 
   return (
