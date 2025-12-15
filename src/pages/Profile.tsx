@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Heart, History, MessageSquare, User, Home, 
-  Calendar, Loader2, Trash2, Eye, Send, LogOut
+  Calendar, Loader2, Trash2, Eye, Send, LogOut, Edit2, Save, Phone, Mail
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -25,7 +25,13 @@ const Profile = ({ settlement }: ProfileProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    full_name: "",
+    phone: ""
+  });
   const [supportMessage, setSupportMessage] = useState({
     subject: "",
     message: ""
@@ -40,6 +46,22 @@ const Profile = ({ settlement }: ProfileProps) => {
         return;
       }
       setUser(session.user);
+      
+      // Fetch user profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .maybeSingle();
+      
+      if (profileData) {
+        setProfile(profileData);
+        setProfileForm({
+          full_name: profileData.full_name || "",
+          phone: profileData.phone || ""
+        });
+      }
+      
       setIsLoading(false);
     };
 
@@ -164,6 +186,33 @@ const Profile = ({ settlement }: ProfileProps) => {
     navigate(`/${settlement}`);
   };
 
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: profileForm.full_name,
+          phone: profileForm.phone
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setProfile((prev: any) => ({
+        ...prev,
+        full_name: profileForm.full_name,
+        phone: profileForm.phone
+      }));
+      setIsEditingProfile(false);
+      toast.success('Профиль обновлён');
+    } catch (error) {
+      toast.error('Ошибка обновления профиля');
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), 'd MMMM yyyy, HH:mm', { locale: ru });
   };
@@ -213,8 +262,12 @@ const Profile = ({ settlement }: ProfileProps) => {
       {/* Main Content */}
       <section className="py-12">
         <div className="container mx-auto px-4">
-          <Tabs defaultValue="favorites" className="space-y-8">
-            <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-3 gap-2">
+          <Tabs defaultValue="profile" className="space-y-8">
+            <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-4 gap-2">
+              <TabsTrigger value="profile" className="gap-2">
+                <User className="w-4 h-4" />
+                <span className="hidden sm:inline">Профиль</span>
+              </TabsTrigger>
               <TabsTrigger value="favorites" className="gap-2">
                 <Heart className="w-4 h-4" />
                 <span className="hidden sm:inline">Избранное</span>
@@ -231,6 +284,95 @@ const Profile = ({ settlement }: ProfileProps) => {
                 <span className="hidden sm:inline">Поддержка</span>
               </TabsTrigger>
             </TabsList>
+
+            {/* Profile Tab */}
+            <TabsContent value="profile">
+              <Card className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold flex items-center gap-2">
+                    <User className="w-5 h-5 text-primary" />
+                    Информация о профиле
+                  </h2>
+                  {!isEditingProfile && (
+                    <Button variant="outline" size="sm" onClick={() => setIsEditingProfile(true)}>
+                      <Edit2 className="w-4 h-4 mr-2" />
+                      Редактировать
+                    </Button>
+                  )}
+                </div>
+
+                {isEditingProfile ? (
+                  <form onSubmit={handleProfileUpdate} className="space-y-4 max-w-md">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Имя</label>
+                      <Input
+                        value={profileForm.full_name}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, full_name: e.target.value }))}
+                        placeholder="Ваше имя"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Телефон</label>
+                      <Input
+                        value={profileForm.phone}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="+7 (999) 123-45-67"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="submit" className="gap-2">
+                        <Save className="w-4 h-4" />
+                        Сохранить
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => {
+                          setIsEditingProfile(false);
+                          setProfileForm({
+                            full_name: profile?.full_name || "",
+                            phone: profile?.phone || ""
+                          });
+                        }}
+                      >
+                        Отмена
+                      </Button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Имя</p>
+                        <p className="font-medium">{profile?.full_name || 'Не указано'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Mail className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Email</p>
+                        <p className="font-medium">{user?.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Phone className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Телефон</p>
+                        <p className="font-medium">{profile?.phone || 'Не указан'}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </TabsContent>
 
             {/* Favorites Tab */}
             <TabsContent value="favorites">
