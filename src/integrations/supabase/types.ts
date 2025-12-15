@@ -398,6 +398,57 @@ export type Database = {
         }
         Relationships: []
       }
+      site_settings: {
+        Row: {
+          address: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          settlement: Database["public"]["Enums"]["settlement_type"]
+          site_description: string | null
+          site_name: string
+          telegram: string | null
+          updated_at: string
+          vk_link: string | null
+          whatsapp: string | null
+          working_hours_weekdays: string | null
+          working_hours_weekends: string | null
+        }
+        Insert: {
+          address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          settlement: Database["public"]["Enums"]["settlement_type"]
+          site_description?: string | null
+          site_name?: string
+          telegram?: string | null
+          updated_at?: string
+          vk_link?: string | null
+          whatsapp?: string | null
+          working_hours_weekdays?: string | null
+          working_hours_weekends?: string | null
+        }
+        Update: {
+          address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          settlement?: Database["public"]["Enums"]["settlement_type"]
+          site_description?: string | null
+          site_name?: string
+          telegram?: string | null
+          updated_at?: string
+          vk_link?: string | null
+          whatsapp?: string | null
+          working_hours_weekdays?: string | null
+          working_hours_weekends?: string | null
+        }
+        Relationships: []
+      }
       support_requests: {
         Row: {
           admin_response: string | null
