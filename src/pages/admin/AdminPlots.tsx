@@ -45,6 +45,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, MapPin, Loader2 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { z } from "zod";
+import { MultipleImageUpload } from "@/components/admin/ImageUpload";
 
 type Plot = Database["public"]["Tables"]["plots"]["Row"];
 
@@ -71,6 +72,7 @@ export const AdminPlots = () => {
     status: "available" as "available" | "reserved" | "sold",
     cadastral_number: "",
     description: "",
+    images: [] as string[],
   });
 
   const { data: plots = [], isLoading } = useQuery({
@@ -147,6 +149,7 @@ export const AdminPlots = () => {
       status: "available",
       cadastral_number: "",
       description: "",
+      images: [],
     });
     setEditingPlot(null);
     setIsDialogOpen(false);
@@ -155,6 +158,7 @@ export const AdminPlots = () => {
 
   const handleEdit = (plot: Plot) => {
     setEditingPlot(plot);
+    const images = plot.images as string[] || [];
     setFormData({
       plot_number: plot.plot_number,
       settlement: plot.settlement,
@@ -163,6 +167,7 @@ export const AdminPlots = () => {
       status: plot.status,
       cadastral_number: plot.cadastral_number || "",
       description: plot.description || "",
+      images: images,
     });
     setErrors({});
     setIsDialogOpen(true);
@@ -198,6 +203,7 @@ export const AdminPlots = () => {
       status: formData.status,
       cadastral_number: formData.cadastral_number || null,
       description: formData.description || null,
+      images: formData.images,
     };
 
     if (editingPlot) {
@@ -351,6 +357,14 @@ export const AdminPlots = () => {
                   />
                 </div>
 
+                <MultipleImageUpload
+                  value={formData.images}
+                  onChange={(images) => setFormData({ ...formData, images })}
+                  label="Фотографии участка"
+                  folder="plots"
+                  maxImages={10}
+                />
+
                 <div className="flex gap-4 pt-4">
                   <Button onClick={handleSubmit} className="flex-1" disabled={isSubmitting}>
                     {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -399,6 +413,7 @@ export const AdminPlots = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-16">Фото</TableHead>
                   <TableHead>Номер</TableHead>
                   <TableHead>Поселок</TableHead>
                   <TableHead>Площадь</TableHead>
@@ -411,19 +426,34 @@ export const AdminPlots = () => {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : filteredPlots.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       Участки не найдены
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredPlots.map((plot) => (
+                  filteredPlots.map((plot) => {
+                    const images = plot.images as string[] || [];
+                    return (
                     <TableRow key={plot.id}>
+                      <TableCell>
+                        {images.length > 0 ? (
+                          <img 
+                            src={images[0]} 
+                            alt={`Участок ${plot.plot_number}`}
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
+                            <MapPin className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium">{plot.plot_number}</TableCell>
                       <TableCell>
                         {plot.settlement === "zapovednoe" ? "Заповедное" : "Колосок"}
@@ -474,7 +504,7 @@ export const AdminPlots = () => {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
+                  )})
                 )}
               </TableBody>
             </Table>

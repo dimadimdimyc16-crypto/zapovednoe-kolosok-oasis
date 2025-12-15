@@ -34,6 +34,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, Newspaper, Eye, EyeOff } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
+import { ImageUpload } from "@/components/admin/ImageUpload";
 
 type News = Database["public"]["Tables"]["news"]["Row"];
 
@@ -276,14 +277,12 @@ export const AdminNews = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>URL изображения</Label>
-                  <Input
-                    value={formData.image_url}
-                    onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                    placeholder="https://example.com/image.jpg"
-                  />
-                </div>
+                <ImageUpload
+                  value={formData.image_url}
+                  onChange={(url) => setFormData({ ...formData, image_url: url })}
+                  label="Изображение новости"
+                  folder="news"
+                />
 
                 <div className="space-y-2">
                   <Label>Краткое описание</Label>

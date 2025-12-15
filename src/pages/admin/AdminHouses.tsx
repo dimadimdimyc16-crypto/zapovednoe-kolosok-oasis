@@ -45,6 +45,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, Building, Loader2 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { z } from "zod";
+import { MultipleImageUpload } from "@/components/admin/ImageUpload";
 
 type House = Database["public"]["Tables"]["houses"]["Row"];
 
@@ -83,6 +84,7 @@ export const AdminHouses = () => {
     full_description: "",
     has_garage: false,
     garage_spaces: "0",
+    images: [] as string[],
   });
 
   const { data: houses = [], isLoading } = useQuery({
@@ -165,6 +167,7 @@ export const AdminHouses = () => {
       full_description: "",
       has_garage: false,
       garage_spaces: "0",
+      images: [],
     });
     setEditingHouse(null);
     setIsDialogOpen(false);
@@ -173,6 +176,7 @@ export const AdminHouses = () => {
 
   const handleEdit = (house: House) => {
     setEditingHouse(house);
+    const images = house.images as string[] || [];
     setFormData({
       title: house.title,
       settlement: house.settlement,
@@ -187,6 +191,7 @@ export const AdminHouses = () => {
       full_description: house.full_description || "",
       has_garage: house.has_garage || false,
       garage_spaces: (house.garage_spaces || 0).toString(),
+      images: images,
     });
     setErrors({});
     setIsDialogOpen(true);
@@ -228,6 +233,7 @@ export const AdminHouses = () => {
       full_description: formData.full_description || null,
       has_garage: formData.has_garage,
       garage_spaces: parseInt(formData.garage_spaces),
+      images: formData.images,
     };
 
     if (editingHouse) {
@@ -429,6 +435,14 @@ export const AdminHouses = () => {
                   />
                 </div>
 
+                <MultipleImageUpload
+                  value={formData.images}
+                  onChange={(images) => setFormData({ ...formData, images })}
+                  label="Фотографии дома"
+                  folder="houses"
+                  maxImages={15}
+                />
+
                 <div className="flex gap-4 pt-4">
                   <Button onClick={handleSubmit} className="flex-1" disabled={isSubmitting}>
                     {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -477,6 +491,7 @@ export const AdminHouses = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-16">Фото</TableHead>
                   <TableHead>Название</TableHead>
                   <TableHead>Поселок</TableHead>
                   <TableHead>Цена</TableHead>
@@ -489,19 +504,34 @@ export const AdminHouses = () => {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : filteredHouses.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       Дома не найдены
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredHouses.map((house) => (
+                  filteredHouses.map((house) => {
+                    const images = house.images as string[] || [];
+                    return (
                     <TableRow key={house.id}>
+                      <TableCell>
+                        {images.length > 0 ? (
+                          <img 
+                            src={images[0]} 
+                            alt={house.title}
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
+                            <Building className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium">{house.title}</TableCell>
                       <TableCell>
                         {house.settlement === "zapovednoe" ? "Заповедное" : "Колосок"}
@@ -550,7 +580,7 @@ export const AdminHouses = () => {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
+                  )})
                 )}
               </TableBody>
             </Table>
