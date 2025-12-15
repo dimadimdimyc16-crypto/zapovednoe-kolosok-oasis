@@ -1,8 +1,10 @@
+import { useQuery } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Phone, Mail, MapPin, Clock, Send, MessageCircle } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,37 +13,6 @@ import { toast } from "sonner";
 interface ContactsProps {
   settlement: "zapovednoe" | "kolosok";
 }
-
-const settlementData = {
-  zapovednoe: {
-    name: "ДПК Заповедное",
-    phone: "+7 (495) 123-45-67",
-    email: "info@zapovednoe.ru",
-    address: "Московская область, Истринский район, ДПК Заповедное",
-    coordinates: "55.8234, 36.9345",
-    workHours: {
-      weekdays: "9:00 - 19:00",
-      weekends: "10:00 - 17:00",
-    },
-    telegram: "@zapovednoe_dpk",
-    whatsapp: "+7 (495) 123-45-67",
-    directions: "30 км от МКАД по Новорижскому шоссе, поворот направо после АЗС «Лукойл»",
-  },
-  kolosok: {
-    name: "ДПК Колосок",
-    phone: "+7 (495) 765-43-21",
-    email: "info@kolosok-dpk.ru",
-    address: "Московская область, Чеховский район, ДПК Колосок",
-    coordinates: "55.1456, 37.4567",
-    workHours: {
-      weekdays: "9:00 - 18:00",
-      weekends: "10:00 - 16:00",
-    },
-    telegram: "@kolosok_dpk",
-    whatsapp: "+7 (495) 765-43-21",
-    directions: "25 км от МКАД по Симферопольскому шоссе, поворот налево в деревне Петровское",
-  },
-};
 
 const Contacts = ({ settlement }: ContactsProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,7 +24,18 @@ const Contacts = ({ settlement }: ContactsProps) => {
     message: "",
   });
 
-  const data = settlementData[settlement];
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ["site-settings", settlement],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_settings")
+        .select("*")
+        .eq("settlement", settlement)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,35 +68,35 @@ const Contacts = ({ settlement }: ContactsProps) => {
     }
   };
 
-  const contactCards = [
+  const contactCards = settings ? [
     {
       icon: Phone,
       title: "Телефон",
-      content: data.phone,
-      href: `tel:${data.phone.replace(/[^\d+]/g, '')}`,
+      content: settings.contact_phone || "",
+      href: settings.contact_phone ? `tel:${settings.contact_phone.replace(/[^\d+]/g, '')}` : undefined,
       description: "Звоните в рабочее время",
     },
     {
       icon: Mail,
       title: "Email",
-      content: data.email,
-      href: `mailto:${data.email}`,
+      content: settings.contact_email || "",
+      href: settings.contact_email ? `mailto:${settings.contact_email}` : undefined,
       description: "Ответим в течение 24 часов",
     },
     {
       icon: MessageCircle,
       title: "Telegram",
-      content: data.telegram,
-      href: `https://t.me/${data.telegram.replace('@', '')}`,
+      content: settings.telegram || "",
+      href: settings.telegram ? `https://t.me/${settings.telegram.replace('@', '')}` : undefined,
       description: "Быстрые ответы на вопросы",
     },
     {
       icon: Clock,
       title: "Время работы",
-      content: data.workHours.weekdays,
-      description: `Выходные: ${data.workHours.weekends}`,
+      content: settings.working_hours_weekdays || "",
+      description: settings.working_hours_weekends ? `Выходные: ${settings.working_hours_weekends}` : "",
     },
-  ];
+  ] : [];
 
   return (
     <Layout settlement={settlement}>
@@ -136,36 +118,52 @@ const Contacts = ({ settlement }: ContactsProps) => {
       {/* Contact Cards */}
       <section className="py-12">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {contactCards.map((card, index) => (
-              <Card 
-                key={index} 
-                className="p-6 hover:shadow-elegant transition-all duration-300 hover:-translate-y-1 group"
-              >
-                <div className="flex flex-col items-center text-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <card.icon className="w-7 h-7 text-primary group-hover:text-primary-foreground transition-colors" />
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <Card key={i} className="p-6">
+                  <div className="flex flex-col items-center text-center gap-4">
+                    <Skeleton className="w-16 h-16 rounded-2xl" />
+                    <Skeleton className="h-6 w-24" />
+                    <Skeleton className="h-4 w-32" />
                   </div>
-                  <div>
-                    <h3 className="font-bold text-lg mb-1">{card.title}</h3>
-                    {card.href ? (
-                      <a 
-                        href={card.href} 
-                        className="text-primary hover:underline font-medium"
-                        target={card.href.startsWith('http') ? '_blank' : undefined}
-                        rel={card.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                      >
-                        {card.content}
-                      </a>
-                    ) : (
-                      <p className="font-medium">{card.content}</p>
-                    )}
-                    <p className="text-sm text-muted-foreground mt-1">{card.description}</p>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {contactCards.map((card, index) => (
+                <Card 
+                  key={index} 
+                  className="p-6 hover:shadow-elegant transition-all duration-300 hover:-translate-y-1 group"
+                >
+                  <div className="flex flex-col items-center text-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                      <card.icon className="w-7 h-7 text-primary group-hover:text-primary-foreground transition-colors" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg mb-1">{card.title}</h3>
+                      {card.href && card.content ? (
+                        <a 
+                          href={card.href} 
+                          className="text-primary hover:underline font-medium"
+                          target={card.href.startsWith('http') ? '_blank' : undefined}
+                          rel={card.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                        >
+                          {card.content}
+                        </a>
+                      ) : (
+                        <p className="font-medium">{card.content || "—"}</p>
+                      )}
+                      {card.description && (
+                        <p className="text-sm text-muted-foreground mt-1">{card.description}</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -178,51 +176,77 @@ const Contacts = ({ settlement }: ContactsProps) => {
               <div>
                 <h2 className="text-3xl font-bold mb-6">Контактная информация</h2>
                 
-                <Card className="p-6 mb-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <MapPin className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-lg mb-2">Адрес</h3>
-                      <p className="text-muted-foreground">{data.address}</p>
-                    </div>
+                {isLoading ? (
+                  <div className="space-y-6">
+                    {[1, 2, 3].map((i) => (
+                      <Card key={i} className="p-6">
+                        <div className="flex items-start gap-4">
+                          <Skeleton className="w-12 h-12 rounded-xl" />
+                          <div className="flex-1">
+                            <Skeleton className="h-6 w-24 mb-2" />
+                            <Skeleton className="h-4 w-48" />
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
                   </div>
-                </Card>
+                ) : settings && (
+                  <>
+                    <Card className="p-6 mb-6">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <MapPin className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg mb-2">Адрес</h3>
+                          <p className="text-muted-foreground">{settings.address || "—"}</p>
+                        </div>
+                      </div>
+                    </Card>
 
-                <Card className="p-6 mb-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Phone className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-lg mb-2">Телефон</h3>
-                      <a 
-                        href={`tel:${data.phone.replace(/[^\d+]/g, '')}`}
-                        className="text-primary hover:underline"
-                      >
-                        {data.phone}
-                      </a>
-                    </div>
-                  </div>
-                </Card>
+                    <Card className="p-6 mb-6">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Phone className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg mb-2">Телефон</h3>
+                          {settings.contact_phone ? (
+                            <a 
+                              href={`tel:${settings.contact_phone.replace(/[^\d+]/g, '')}`}
+                              className="text-primary hover:underline"
+                            >
+                              {settings.contact_phone}
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
 
-                <Card className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Mail className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-lg mb-2">Email</h3>
-                      <a 
-                        href={`mailto:${data.email}`}
-                        className="text-primary hover:underline"
-                      >
-                        {data.email}
-                      </a>
-                    </div>
-                  </div>
-                </Card>
+                    <Card className="p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Mail className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg mb-2">Email</h3>
+                          {settings.contact_email ? (
+                            <a 
+                              href={`mailto:${settings.contact_email}`}
+                              className="text-primary hover:underline"
+                            >
+                              {settings.contact_email}
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  </>
+                )}
               </div>
             </div>
 
